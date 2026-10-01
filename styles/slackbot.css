@@ -1,0 +1,5 @@
+/* ABOUTME: Hides the Slackbot button at the top of the Tab rail, icon and label together. */
+/* ABOUTME: Only some workspaces have this button; the rule matches nothing in the others. */
+[data-qa="draggable_tab_item"]:has([data-qa="tab_rail_slackbot_button"]) {
+  display: none !important;
+}
