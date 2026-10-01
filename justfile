@@ -7,3 +7,7 @@ default:
 # Run the fast tests (no Slack needed)
 test:
     bun test
+
+# Run the SlackApp contract against real Slack (restarts Slack; ask Ted first)
+smoke:
+    HACKSLACK_SMOKE=1 bun test smoke
