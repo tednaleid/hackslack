@@ -1,1 +1,3 @@
 .llm
+.state/
+.playwright-cli/
