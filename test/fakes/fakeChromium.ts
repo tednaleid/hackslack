@@ -1,6 +1,8 @@
 // ABOUTME: Scripted stand-in for Chromium's DevTools endpoint, speaking CDP over an in-memory Transport.
 // ABOUTME: Tracks targets, sessions, new-document scripts and a FakeDocument for each attached page.
 import type { Transport } from "../../src/cdp/transport";
+import type { Mode } from "../../src/core/ports";
+import type { SlackConnection, SlackProcess } from "../../src/slack/cdpSlackApp";
 import { evaluateIn, FakeDocument } from "./fakeDocument";
 import { memoryTransportPair } from "./memoryTransport";
 
@@ -106,5 +108,14 @@ export class FakeChromium {
       default:
         return fail(`FakeChromium does not handle ${request.method}`);
     }
+  }
+}
+
+export class FakeChromiumProcess implements SlackProcess {
+  chromium: FakeChromium | null = null;
+
+  async start(mode: Mode): Promise<SlackConnection> {
+    this.chromium = new FakeChromium();
+    return { transport: this.chromium.clientTransport, slackPid: 31337, port: mode === "inspect" ? 9555 : null };
   }
 }
