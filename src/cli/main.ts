@@ -1,11 +1,11 @@
 // ABOUTME: Command-line entry point used by the justfile recipes.
 // ABOUTME: Commands: run <mode>, start <mode>, status, port.
 import type { Mode } from "../core/ports";
-import { isProcessAlive } from "../slack/macProcesses";
+import { runningLauncherPids } from "../slack/macProcesses";
 import { runLauncher } from "./run";
 import { startInBackground } from "./start";
 import { readState } from "./state";
-import { describeStatus, observeProcesses } from "./status";
+import { describeStatus, isLauncherRunning, observeProcesses } from "./status";
 
 function parseMode(value: string | undefined): Mode {
   if (value === "normal" || value === "inspect") return value;
@@ -27,7 +27,7 @@ switch (command) {
   }
   case "port": {
     const state = readState();
-    if (state?.mode !== "inspect" || state.port === null || !isProcessAlive(state.launcherPid)) {
+    if (state?.mode !== "inspect" || state.port === null || !isLauncherRunning(state, runningLauncherPids())) {
       console.error("Slack is not in Inspect mode. Run `just inspect` first.");
       process.exit(1);
     }

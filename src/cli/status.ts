@@ -1,6 +1,6 @@
 // ABOUTME: Builds the text `just status` prints, warning first whenever Slack has a debugging port open.
 // ABOUTME: describeStatus is pure; observeProcesses gathers the facts it needs from the system.
-import { isProcessAlive, listeningPorts, runningSlackPids } from "../slack/macProcesses";
+import { listeningPorts, runningLauncherPids, runningSlackPids } from "../slack/macProcesses";
 import type { LauncherState } from "./state";
 
 export interface ObservedProcesses {
@@ -36,10 +36,14 @@ export function describeStatus(state: LauncherState | null, seen: ObservedProces
   return lines;
 }
 
+export function isLauncherRunning(state: LauncherState | null, launcherPids: number[]): boolean {
+  return state !== null && state.exitReason === null && launcherPids.includes(state.launcherPid);
+}
+
 export function observeProcesses(state: LauncherState | null): ObservedProcesses {
   const slackPids = runningSlackPids();
   return {
-    launcherAlive: state !== null && isProcessAlive(state.launcherPid),
+    launcherAlive: isLauncherRunning(state, runningLauncherPids()),
     slackPids,
     listeningPorts: slackPids.flatMap(listeningPorts),
   };

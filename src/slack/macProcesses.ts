@@ -22,18 +22,14 @@ export function runningSlackPids(): number[] {
   return result.stdout.split("\n").filter(Boolean).map(Number);
 }
 
+export function runningLauncherPids(): number[] {
+  const result = spawnSync("pgrep", ["-f", "src/cli/main.ts run"], { encoding: "utf8" });
+  return result.stdout.split("\n").filter(Boolean).map(Number);
+}
+
 export function listeningPorts(pid: number): number[] {
   const result = spawnSync("lsof", ["-nP", "-iTCP", "-sTCP:LISTEN", "-a", "-p", String(pid)], { encoding: "utf8" });
   return [...result.stdout.matchAll(/:(\d+) \(LISTEN\)/g)].map((match) => Number(match[1]));
-}
-
-export function isProcessAlive(pid: number): boolean {
-  try {
-    process.kill(pid, 0);
-    return true;
-  } catch (error) {
-    return (error as NodeJS.ErrnoException).code === "EPERM";
-  }
 }
 
 export async function waitUntil(check: () => boolean, timeoutMs: number, intervalMs = 200): Promise<boolean> {

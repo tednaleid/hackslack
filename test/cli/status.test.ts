@@ -1,8 +1,8 @@
 // ABOUTME: Tests for the text `just status` prints for each combination of state and running processes.
 // ABOUTME: describeStatus is pure; the processes it is given are made up here.
-import { expect, test } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import type { LauncherState } from "../../src/cli/state";
-import { describeStatus } from "../../src/cli/status";
+import { describeStatus, isLauncherRunning } from "../../src/cli/status";
 
 const NORMAL: LauncherState = {
   launcherPid: 100,
@@ -53,4 +53,16 @@ test("warns about an open port even when Slack is not under the Launcher", () =>
   const lines = describeStatus(INSPECT, { launcherAlive: false, slackPids: [200], listeningPorts: [51234] });
   expect(lines[0]).toStartWith("WARNING");
   expect(lines[1]).toContain("running without the Launcher");
+});
+
+describe("isLauncherRunning", () => {
+  test("is true only when the recorded pid is one of the running Launcher processes", () => {
+    expect(isLauncherRunning(NORMAL, [100])).toBe(true);
+    expect(isLauncherRunning(NORMAL, [555])).toBe(false);
+    expect(isLauncherRunning(null, [100])).toBe(false);
+  });
+
+  test("is false once the Launcher recorded an exit, even if its pid was reused by another Launcher", () => {
+    expect(isLauncherRunning({ ...NORMAL, exitReason: "pipe closed by Slack" }, [100])).toBe(false);
+  });
 });

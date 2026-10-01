@@ -3,9 +3,9 @@
 import { spawn } from "node:child_process";
 import { mkdirSync, openSync } from "node:fs";
 import type { Mode } from "../core/ports";
-import { isProcessAlive, waitUntil } from "../slack/macProcesses";
+import { runningLauncherPids, waitUntil } from "../slack/macProcesses";
 import { LOG_PATH, MAIN_PATH, readState, REPO_ROOT, STATE_DIR } from "./state";
-import { describeStatus, observeProcesses } from "./status";
+import { describeStatus, isLauncherRunning, observeProcesses } from "./status";
 
 export async function startInBackground(mode: Mode): Promise<number> {
   await stopRunningLauncher();
@@ -36,9 +36,10 @@ export async function startInBackground(mode: Mode): Promise<number> {
 
 async function stopRunningLauncher(): Promise<void> {
   const state = readState();
-  if (state === null || !isProcessAlive(state.launcherPid)) return;
+  if (state === null || !isLauncherRunning(state, runningLauncherPids())) return;
+  const stillRunning = () => runningLauncherPids().includes(state.launcherPid);
   process.kill(state.launcherPid, "SIGTERM");
-  if (!(await waitUntil(() => !isProcessAlive(state.launcherPid), 5_000))) {
+  if (!(await waitUntil(() => !stillRunning(), 5_000)) && stillRunning()) {
     process.kill(state.launcherPid, "SIGKILL");
   }
 }
