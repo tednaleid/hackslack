@@ -1,11 +1,11 @@
-// ABOUTME: Starts the Launcher in the background, replacing any Launcher already running.
-// ABOUTME: Waits until the Stylesheets are applied, then prints the status.
+// ABOUTME: Starts the Launcher in the background, replacing any Launcher already running, and waits for it.
+// ABOUTME: openSlack brings an already styled Slack to the front instead of restarting it.
 import { spawn } from "node:child_process";
 import { mkdirSync, openSync } from "node:fs";
 import type { Mode } from "../core/ports";
-import { runningLauncherPids, waitUntil } from "../slack/macProcesses";
+import { activateSlack, runningLauncherPids, waitUntil } from "../slack/macProcesses";
 import { LOG_PATH, MAIN_PATH, readState, REPO_ROOT, rotateLog, STATE_DIR } from "./state";
-import { describeStatus, isLauncherRunning, observeProcesses } from "./status";
+import { describeStatus, isLauncherRunning, isSlackManaged, observeProcesses } from "./status";
 
 export async function startInBackground(mode: Mode): Promise<number> {
   await stopRunningLauncher();
@@ -33,6 +33,15 @@ export async function startInBackground(mode: Mode): Promise<number> {
   }
   for (const line of describeStatus(state, observeProcesses(state))) console.log(line);
   return 0;
+}
+
+export async function openSlack(): Promise<number> {
+  const state = readState();
+  if (isSlackManaged(state, observeProcesses(state))) {
+    activateSlack();
+    return 0;
+  }
+  return startInBackground("normal");
 }
 
 async function stopRunningLauncher(): Promise<void> {

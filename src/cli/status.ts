@@ -22,9 +22,7 @@ export function describeStatus(state: LauncherState | null, seen: ObservedProces
     if (state?.exitReason) lines.push(`Last exit: ${state.exitReason}`);
     return lines;
   }
-  const managed =
-    state !== null && seen.launcherAlive && state.slackPid !== null && seen.slackPids.includes(state.slackPid);
-  if (!managed || state === null) {
+  if (!isSlackManaged(state, seen) || state === null) {
     lines.push("Slack is running without the Launcher, so the Stylesheets are not applied. Run `just start`.");
     return lines;
   }
@@ -34,6 +32,10 @@ export function describeStatus(state: LauncherState | null, seen: ObservedProces
     `Stylesheets applied ${state.injectCount} time(s) across ${state.pageCount} page(s); last at ${state.lastInjectAt ?? "never"}`,
   );
   return lines;
+}
+
+export function isSlackManaged(state: LauncherState | null, seen: ObservedProcesses): boolean {
+  return state !== null && seen.launcherAlive && state.slackPid !== null && seen.slackPids.includes(state.slackPid);
 }
 
 export function isLauncherRunning(state: LauncherState | null, launcherPids: number[]): boolean {

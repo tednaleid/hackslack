@@ -18,17 +18,21 @@ export function findSlackBinary(): string {
 }
 
 export function runningSlackPids(): number[] {
-  const result = spawnSync("pgrep", ["-x", "Slack"], { encoding: "utf8" });
+  const result = spawnSync("/usr/bin/pgrep", ["-x", "Slack"], { encoding: "utf8" });
   return result.stdout.split("\n").filter(Boolean).map(Number);
 }
 
 export function runningLauncherPids(): number[] {
-  const result = spawnSync("pgrep", ["-f", "src/cli/main.ts run"], { encoding: "utf8" });
+  const result = spawnSync("/usr/bin/pgrep", ["-f", "src/cli/main.ts run"], { encoding: "utf8" });
   return result.stdout.split("\n").filter(Boolean).map(Number);
 }
 
+export function activateSlack(): void {
+  spawnSync("/usr/bin/osascript", ["-e", `tell application id "${SLACK_BUNDLE_ID}" to activate`]);
+}
+
 export function listeningPorts(pid: number): number[] {
-  const result = spawnSync("lsof", ["-nP", "-iTCP", "-sTCP:LISTEN", "-a", "-p", String(pid)], { encoding: "utf8" });
+  const result = spawnSync("/usr/sbin/lsof", ["-nP", "-iTCP", "-sTCP:LISTEN", "-a", "-p", String(pid)], { encoding: "utf8" });
   return [...result.stdout.matchAll(/:(\d+) \(LISTEN\)/g)].map((match) => Number(match[1]));
 }
 
@@ -45,7 +49,7 @@ export async function quitRunningSlack(log: Log): Promise<void> {
   const stopped = () => runningSlackPids().length === 0;
   if (stopped()) return;
   log("asking the running Slack to quit");
-  spawnSync("osascript", ["-e", `tell application id "${SLACK_BUNDLE_ID}" to quit`]);
+  spawnSync("/usr/bin/osascript", ["-e", `tell application id "${SLACK_BUNDLE_ID}" to quit`]);
   if (await waitUntil(stopped, 10_000)) return;
   log("Slack did not quit; sending SIGTERM");
   signalSlack("SIGTERM");

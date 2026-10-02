@@ -2,7 +2,7 @@
 // ABOUTME: describeStatus is pure; the processes it is given are made up here.
 import { describe, expect, test } from "bun:test";
 import type { LauncherState } from "../../src/cli/state";
-import { describeStatus, isLauncherRunning } from "../../src/cli/status";
+import { describeStatus, isLauncherRunning, isSlackManaged } from "../../src/cli/status";
 
 const NORMAL: LauncherState = {
   launcherPid: 100,
@@ -64,5 +64,18 @@ describe("isLauncherRunning", () => {
 
   test("is false once the Launcher recorded an exit, even if its pid was reused by another Launcher", () => {
     expect(isLauncherRunning({ ...NORMAL, exitReason: "pipe closed by Slack" }, [100])).toBe(false);
+  });
+});
+
+describe("isSlackManaged", () => {
+  test("is true when the running Launcher's Slack is running", () => {
+    expect(isSlackManaged(NORMAL, { launcherAlive: true, slackPids: [200], listeningPorts: [] })).toBe(true);
+  });
+
+  test("is false when Slack is quit, unmanaged, or the Launcher is gone", () => {
+    expect(isSlackManaged(NORMAL, { launcherAlive: true, slackPids: [], listeningPorts: [] })).toBe(false);
+    expect(isSlackManaged(NORMAL, { launcherAlive: true, slackPids: [300], listeningPorts: [] })).toBe(false);
+    expect(isSlackManaged(NORMAL, { launcherAlive: false, slackPids: [200], listeningPorts: [] })).toBe(false);
+    expect(isSlackManaged(null, { launcherAlive: false, slackPids: [200], listeningPorts: [] })).toBe(false);
   });
 });

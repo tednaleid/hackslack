@@ -14,13 +14,26 @@ There are no npm dependencies and no build step.
 
 ## Usage
 
+Install the Hackslack app once:
+
 ```bash
+just install-app
+```
+
+This creates `~/Applications/Hackslack.app` with Slack's icon. Clicking it brings styled Slack to the front, or starts it if Slack is quit or running without the Stylesheets (for example after Slack updates itself). Then:
+
+- Keep Hackslack in the Dock instead of Slack, and add it to System Settings > General > Login Items.
+- Turn off "Launch Slack on login" in Slack's own preferences, and remove Slack from Login Items.
+- Run `just install-app` again if you move the repo or reinstall Bun. To remove it, delete `~/Applications/Hackslack.app`.
+
+From a terminal:
+
+```bash
+just open       # what clicking Hackslack does
 just start      # restart Slack in Normal mode with the Stylesheets applied
 just status     # mode, whether the Stylesheets are applied, any open debugging port
 just logs       # last lines of the launcher log
 ```
-
-Start Slack with `just start` instead of opening Slack.app. If Slack is opened another way, or restarts itself after an update, it runs without the Stylesheets until you run `just start` again.
 
 ## Changing how Slack looks
 

@@ -1,7 +1,15 @@
 // ABOUTME: Tests for the macOS process helpers that can run without Slack.
 // ABOUTME: Covers port selection, polling and checking the debugger URL.
 import { expect, test } from "bun:test";
-import { pickFreePort, waitForDebuggerUrl, waitUntil } from "../../src/slack/macProcesses";
+import { join } from "node:path";
+import {
+  listeningPorts,
+  pickFreePort,
+  runningLauncherPids,
+  runningSlackPids,
+  waitForDebuggerUrl,
+  waitUntil,
+} from "../../src/slack/macProcesses";
 
 test("pickFreePort returns a port that can be listened on", async () => {
   const port = await pickFreePort();
@@ -42,4 +50,13 @@ test("waitForDebuggerUrl rejects a URL that points anywhere else", async () => {
   } finally {
     server.stop(true);
   }
+});
+
+test("process queries work without a PATH, as when launched from the Dock", () => {
+  const modulePath = join(import.meta.dir, "../../src/slack/macProcesses.ts");
+  const script = `const m = await import(${JSON.stringify(modulePath)});
+console.log(JSON.stringify([Array.isArray(m.runningSlackPids()), Array.isArray(m.runningLauncherPids()), m.listeningPorts(process.pid)]));`;
+  const result = Bun.spawnSync([process.execPath, "-e", script], { env: { HOME: process.env.HOME ?? "" } });
+  expect(result.stderr.toString()).toBe("");
+  expect(result.stdout.toString().trim()).toBe("[true,true,[]]");
 });

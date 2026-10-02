@@ -8,6 +8,14 @@ default:
 start:
     bun src/cli/main.ts start normal
 
+# Bring styled Slack to the front, or start it if it is not running styled
+open:
+    bun src/cli/main.ts open
+
+# Install ~/Applications/Hackslack.app, which does what `just open` does, from the Dock or Login Items
+install-app:
+    bun src/cli/main.ts install-app
+
 # Restart Slack in Inspect mode: Stylesheets applied plus a debugging port on 127.0.0.1
 inspect:
     bun src/cli/main.ts start inspect
