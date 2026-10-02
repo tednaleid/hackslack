@@ -16,9 +16,10 @@ inspect:
 attach:
     port="$(bun src/cli/main.ts port)" && playwright-cli attach --cdp="http://127.0.0.1:$port"
 
-# Detach playwright-cli from Slack, leaving Slack running
+# Detach playwright-cli from Slack, leaving Slack running, and delete its captures (they can hold message text)
 detach:
-    playwright-cli detach
+    -playwright-cli detach
+    rm -rf .playwright-cli
 
 # Show the mode, whether the Stylesheets are applied, and any open debugging port
 status:
