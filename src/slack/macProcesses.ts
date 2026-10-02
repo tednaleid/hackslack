@@ -80,12 +80,16 @@ export function pickFreePort(): Promise<number> {
 export async function waitForDebuggerUrl(port: number, timeoutMs: number): Promise<string> {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
+    let url: string | undefined;
     try {
       const response = await fetch(`http://127.0.0.1:${port}/json/version`);
-      const body = (await response.json()) as { webSocketDebuggerUrl?: string };
-      if (body.webSocketDebuggerUrl) return body.webSocketDebuggerUrl;
+      url = ((await response.json()) as { webSocketDebuggerUrl?: string }).webSocketDebuggerUrl;
     } catch {
       // Slack has not opened the port yet.
+    }
+    if (url) {
+      if (!url.startsWith(`ws://127.0.0.1:${port}/`)) throw new Error(`unexpected debugger URL ${url}; expected one on 127.0.0.1`);
+      return url;
     }
     await Bun.sleep(250);
   }
