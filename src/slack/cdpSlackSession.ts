@@ -16,6 +16,7 @@ interface TargetInfo {
 export class CdpSlackSession {
   private readonly sessions = new Map<string, string>();
   private readonly attaching = new Set<string>();
+  private readonly destroyedWhileAttaching = new Set<string>();
   private readonly scripts = new Map<string, string>();
   private readonly queues = new Map<string, Promise<void>>();
 
@@ -50,13 +51,17 @@ export class CdpSlackSession {
     if (info.type !== "page" || !SLACK_PAGE_URL.test(info.url)) return;
     if (this.sessions.has(info.targetId) || this.attaching.has(info.targetId)) return;
     this.attaching.add(info.targetId);
-    void this.attach(info).finally(() => this.attaching.delete(info.targetId));
+    void this.attach(info).finally(() => {
+      this.attaching.delete(info.targetId);
+      this.destroyedWhileAttaching.delete(info.targetId);
+    });
   }
 
   private async attach(info: TargetInfo): Promise<void> {
     try {
       const { sessionId } = await this.cdp.send("Target.attachToTarget", { targetId: info.targetId, flatten: true });
       await this.cdp.send("Page.enable", {}, sessionId);
+      if (this.destroyedWhileAttaching.has(info.targetId)) return;
       this.sessions.set(info.targetId, sessionId);
       this.log(`attached to Slack page ${shortId(info.targetId)}`);
       this.events.pageReady({ id: info.targetId, url: info.url });
@@ -66,6 +71,7 @@ export class CdpSlackSession {
   }
 
   private forget(targetId: string): void {
+    if (this.attaching.has(targetId)) this.destroyedWhileAttaching.add(targetId);
     this.scripts.delete(targetId);
     this.queues.delete(targetId);
     if (this.sessions.delete(targetId)) this.events.pageGone(targetId);
@@ -75,9 +81,9 @@ export class CdpSlackSession {
     const sessionId = this.sessionFor(pageId);
     const source = buildInjectionSource(css);
     const previous = this.scripts.get(pageId);
-    if (previous) await this.cdp.send("Page.removeScriptToEvaluateOnNewDocument", { identifier: previous }, sessionId);
     const { identifier } = await this.cdp.send("Page.addScriptToEvaluateOnNewDocument", { source }, sessionId);
     this.scripts.set(pageId, identifier);
+    if (previous) await this.cdp.send("Page.removeScriptToEvaluateOnNewDocument", { identifier: previous }, sessionId);
     await this.evaluate(sessionId, source);
   }
 

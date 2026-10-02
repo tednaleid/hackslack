@@ -98,3 +98,31 @@ test("reports Slack exiting when the connection closes", async () => {
   await eventually(() => exits.length === 1);
   expect(exits).toEqual(["closed"]);
 });
+
+test("keeps styling a page after adding its new-document script failed once", async () => {
+  const { chromium, session, ready } = await startSession();
+  await eventually(() => ready.length === 1);
+  await session.applyCss(SLACK_TARGET.targetId, ".a {}");
+  chromium.failNext.add("Page.addScriptToEvaluateOnNewDocument");
+  await expect(session.applyCss(SLACK_TARGET.targetId, ".b {}")).rejects.toThrow("failed as the test asked");
+  await session.applyCss(SLACK_TARGET.targetId, ".c {}");
+  expect(chromium.newDocumentScripts.get(SLACK_TARGET.targetId)!.size).toBe(1);
+  chromium.reloadPage(SLACK_TARGET.targetId);
+  expect(appliedCss(chromium, SLACK_TARGET.targetId)).toBe(".c {}");
+});
+
+test("does not report a page that was destroyed while attaching", async () => {
+  const chromium = new FakeChromium();
+  chromium.destroyOnPageEnable = true;
+  const ready: SlackPage[] = [];
+  const session = new CdpSlackSession(
+    new CdpClient(chromium.clientTransport),
+    { pageReady: (page) => ready.push(page), pageGone: () => {}, exited: () => {} },
+    () => {},
+  );
+  await session.start();
+  await eventually(() => chromium.callsTo("Page.enable") === 1);
+  await Bun.sleep(20);
+  expect(ready).toEqual([]);
+  await expect(session.applyCss(SLACK_TARGET.targetId, ".a {}")).rejects.toThrow("no attached Slack page");
+});

@@ -29,6 +29,8 @@ export class FakeChromium {
   readonly clientTransport: Transport;
   readonly documents = new Map<string, FakeDocument>();
   readonly newDocumentScripts = new Map<string, Map<string, string>>();
+  readonly failNext = new Set<string>();
+  destroyOnPageEnable = false;
   private readonly peer: Transport;
   private readonly received: string[] = [];
   private readonly sessionTargets = new Map<string, string>();
@@ -76,6 +78,7 @@ export class FakeChromium {
     const fail = (message: string) => this.peer.send(JSON.stringify({ id: request.id, error: { code: -32000, message } }));
     const targetId = request.sessionId ? this.sessionTargets.get(request.sessionId) : undefined;
     if (request.sessionId && !targetId) return fail(`Session with given id not found: ${request.sessionId}`);
+    if (this.failNext.delete(request.method)) return fail(`${request.method} failed as the test asked`);
 
     switch (request.method) {
       case "Target.setDiscoverTargets":
@@ -90,14 +93,16 @@ export class FakeChromium {
         return reply({ sessionId });
       }
       case "Page.enable":
-        return reply({});
+        reply({});
+        if (this.destroyOnPageEnable) this.destroyTarget(targetId!);
+        return;
       case "Page.addScriptToEvaluateOnNewDocument": {
         const identifier = String(this.nextScriptId++);
         this.newDocumentScripts.get(targetId!)!.set(identifier, params.source);
         return reply({ identifier });
       }
       case "Page.removeScriptToEvaluateOnNewDocument":
-        this.newDocumentScripts.get(targetId!)!.delete(params.identifier);
+        if (!this.newDocumentScripts.get(targetId!)!.delete(params.identifier)) return fail("Script not found");
         return reply({});
       case "Runtime.evaluate":
         try {
