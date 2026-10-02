@@ -1,7 +1,7 @@
 // ABOUTME: Tests for FsStylesheets: combining styles/*.css in name order and watching for changes.
 // ABOUTME: Uses a fresh temporary directory per test.
 import { beforeEach, expect, test } from "bun:test";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { FsStylesheets } from "../../src/stylesheets/fsStylesheets";
@@ -52,4 +52,19 @@ test("notifies after .css changes, ignores other files, and stops when unsubscri
   writeFileSync(join(dir, "b.css"), ".b {}");
   await Bun.sleep(200);
   expect(changes).toBe(seen);
+});
+
+test("keeps notifying after the styles directory is deleted and recreated", async () => {
+  const stylesDir = join(dir, "styles");
+  mkdirSync(stylesDir);
+  const stylesheets = new FsStylesheets(stylesDir, 30);
+  let changes = 0;
+  const stop = stylesheets.watch(() => changes++);
+  rmSync(stylesDir, { recursive: true });
+  mkdirSync(stylesDir);
+  await Bun.sleep(300);
+  changes = 0;
+  writeFileSync(join(stylesDir, "a.css"), ".a {}");
+  await eventually(() => changes >= 1, 2000, "a change notification after the directory came back");
+  stop();
 });
