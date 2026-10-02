@@ -1,0 +1,5 @@
+/* ABOUTME: Hides the sparkle Slackbot AI button in the top bar next to search. */
+/* ABOUTME: Hides its fixed-width wrapper too, so no empty slot is left; slackbot.css covers the Tab rail button. */
+[class*="sparkleWrapper"]:has([data-qa="slackbot-ai-button"]) {
+  display: none !important;
+}
