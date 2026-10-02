@@ -9,14 +9,28 @@ import type { Mode } from "../core/ports";
 import type { SlackConnection, SlackProcess } from "./cdpSlackApp";
 import { findSlackBinary, pickFreePort, quitRunningSlack, waitForDebuggerUrl } from "./macProcesses";
 
+export interface MacSlackProcessOptions {
+  binaryPath?: string;
+  debuggerTimeoutMs?: number;
+  quitRunningSlack?: (log: Log) => Promise<void>;
+}
+
 export class MacSlackProcess implements SlackProcess {
+  private readonly binaryPath: string;
+  private readonly debuggerTimeoutMs: number;
+  private readonly quitRunningSlack: (log: Log) => Promise<void>;
+
   constructor(
     private readonly log: Log,
-    private readonly binaryPath: string = findSlackBinary(),
-  ) {}
+    options: MacSlackProcessOptions = {},
+  ) {
+    this.binaryPath = options.binaryPath ?? findSlackBinary();
+    this.debuggerTimeoutMs = options.debuggerTimeoutMs ?? 30_000;
+    this.quitRunningSlack = options.quitRunningSlack ?? quitRunningSlack;
+  }
 
   async start(mode: Mode): Promise<SlackConnection> {
-    await quitRunningSlack(this.log);
+    await this.quitRunningSlack(this.log);
     return mode === "normal" ? this.startWithPipe() : this.startWithPort();
   }
 
@@ -39,7 +53,13 @@ export class MacSlackProcess implements SlackProcess {
     if (child.pid === undefined) throw new Error(`could not start ${this.binaryPath}`);
     child.unref();
     this.log(`started Slack pid=${child.pid} in Inspect mode; debugging port ${port} is open on 127.0.0.1`);
-    const url = await waitForDebuggerUrl(port, 30_000);
-    return { transport: await webSocketTransport(url), slackPid: child.pid, port };
+    try {
+      const url = await waitForDebuggerUrl(port, this.debuggerTimeoutMs);
+      return { transport: await webSocketTransport(url), slackPid: child.pid, port };
+    } catch (error) {
+      this.log(`could not connect to Slack's debugging port; stopping Slack pid=${child.pid}`);
+      process.kill(child.pid, "SIGTERM");
+      throw error;
+    }
   }
 }
