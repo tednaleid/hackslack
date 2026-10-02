@@ -4,12 +4,13 @@ import { spawn } from "node:child_process";
 import { mkdirSync, openSync } from "node:fs";
 import type { Mode } from "../core/ports";
 import { runningLauncherPids, waitUntil } from "../slack/macProcesses";
-import { LOG_PATH, MAIN_PATH, readState, REPO_ROOT, STATE_DIR } from "./state";
+import { LOG_PATH, MAIN_PATH, readState, REPO_ROOT, rotateLog, STATE_DIR } from "./state";
 import { describeStatus, isLauncherRunning, observeProcesses } from "./status";
 
 export async function startInBackground(mode: Mode): Promise<number> {
   await stopRunningLauncher();
   mkdirSync(STATE_DIR, { recursive: true });
+  rotateLog();
   const logFd = openSync(LOG_PATH, "a");
   const child = spawn(process.execPath, [MAIN_PATH, "run", mode], {
     cwd: REPO_ROOT,

@@ -1,6 +1,6 @@
 // ABOUTME: Paths used by the CLI and the Launcher's state file in .state/launcher.json.
 // ABOUTME: The running Launcher writes the state; `just status`, `just start` and `just attach` read it.
-import { mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, renameSync, statSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import type { Mode } from "../core/ports";
 
@@ -10,6 +10,7 @@ export const STATE_DIR = join(REPO_ROOT, ".state");
 export const STATE_PATH = join(STATE_DIR, "launcher.json");
 export const LOG_PATH = join(STATE_DIR, "launcher.log");
 export const MAIN_PATH = join(REPO_ROOT, "src", "cli", "main.ts");
+const LOG_LIMIT_BYTES = 1_000_000;
 
 export interface LauncherState {
   launcherPid: number;
@@ -36,4 +37,8 @@ export function writeState(state: LauncherState, path = STATE_PATH): void {
   const temporary = `${path}.${process.pid}.tmp`;
   writeFileSync(temporary, JSON.stringify(state, null, 2));
   renameSync(temporary, path);
+}
+
+export function rotateLog(path = LOG_PATH, maxBytes = LOG_LIMIT_BYTES): void {
+  if (existsSync(path) && statSync(path).size > maxBytes) renameSync(path, `${path}.1`);
 }
